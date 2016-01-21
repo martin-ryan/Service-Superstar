@@ -1,0 +1,22 @@
+{
+  "name": "service_superstar",
+  "version": "1.0.0",
+  "description": "Give the auto service industry a helping hand! ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/martin-ryan/Service-Superstar.git"
+  },
+  "author": "Martin Ryan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/martin-ryan/Service-Superstar/issues"
+  },
+  "homepage": "https://github.com/martin-ryan/Service-Superstar#readme",
+  "dependencies": {
+    "hapi": "^12.1.0"
+  }
+}
