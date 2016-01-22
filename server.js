@@ -23,7 +23,7 @@ server.register(inert, (err) => {
       path:'/',
       handler: function (request, reply) {
         // return reply("hello world");
-        reply.file("index.html");
+        reply.file("public/dist/index.html");
       }
   });
 });

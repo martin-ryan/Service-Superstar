@@ -1,83 +1,84 @@
+'use strict'
+//
 var gulp = require('gulp');
+var watch = require('gulp-watch');
+var sass = require('gulp-sass');
+var autoprefixer = require('gulp-autoprefixer');
+var browserSync = require('browser-sync');
+var plumber = require('gulp-plumber');
+var reload = browserSync.reload;
 var concat = require('gulp-concat');
 var eslint = require('gulp-eslint');
+var jshint = require('gulp-jshint');
 var stripDebug = require('gulp-strip-debug');
 var uglify = require('gulp-uglify');
 var minifyhtml = require('gulp-minify-html');
-var livereload = require('gulp-livereload');
+var nodemon = require('gulp-nodemon');
+var babel = require('gulp-babel');
+var Cache = require('gulp-file-cache');
 
 //
 //
+var AUTOPREFIXER_BROWSERS = [
+  'ie >= 10', 'ie_mob >= 10', 'ff >= 30', 'chrome >= 34', 'Safari >= 7', 'Opera >= 23', 'iOS >= 7', 'ChromeAndroid >= 4.4', 'bb >= 10'
+];
+var localhost = 'localhost:3000';
+var cache = new Cache();
 var src = 'public/src';
 var dist = 'public/dist';
 var javascript = 'script.js';
-var paths = {
+var server = 'server.js';
+var SOURCE = {
   js: src + '/js/*.js',
   scss: src + '/scss/*.scss',
+  css: dist + '/css',
   html: src + '/**/*.html'
 };
 
 //
 //
-gulp.task('lint', function () {
-  return gulp.src(paths.js)
-      // eslint() attaches the lint output to the "eslint" property
-      // of the file object so it can be used by other modules.
-      .pipe(eslint({
-        "globals":{
-          "jQuery": false,
-          "$": true
-        }
-      }))
-      // eslint.format() outputs the lint results to the console.
-      // Alternatively use eslint.formatEach() (see Docs).
-      .pipe(eslint.format())
-      // To have the process exit with an error code (1) on
-      // lint error, return the stream and pipe to failAfterError last.
-      .pipe(eslint.failAfterError());
-
-});
-
-// Combine & Compress JS into one script.js
-gulp.task('combine-js', function () {
-  return gulp.src(paths.js)
-    // .pipe(stripDebug()) // strip all debugs and alerts
-    .pipe(concat(javascript))
-    .pipe(uglify())
-    .pipe(gulp.dest(dist + '/js'));
-});
-
-//
-// Compile sass to css
-// gulp.task('compile-sass', function () {
-//   return gulp.src(paths.scss)
-//     .pipe(sass())
-//     .pipe(gulp.dest(dist + '/css'));
-// });
-
-//
-// Compress HTML
-gulp.task('compress-html', function () {
-  return gulp.src(paths.html)
-    .pipe(minifyhtml())
-    .pipe(gulp.dest(dist + '/'));
-});
-
-// Watch files and reload browser
-gulp.task('watch', function () {
-  livereload.listen();
-  gulp.watch(paths.js, ['combine-js']);
-  // gulp.watch(paths.scss, ['compile-sass']);
-  gulp.watch(paths.html, ['compress-html']);
-  gulp.watch(dist + '/**').on('change', livereload.changed);
+gulp.task('sass', function() {
+  gulp.src(SOURCE.scss)
+    .pipe(plumber())
+    .pipe(sass())
+    .pipe(autoprefixer({ browsers: AUTOPREFIXER_BROWSERS }))
+    .pipe(gulp.dest(SOURCE.css))
+    .pipe(reload({ stream: true }));
 });
 
 //
 //
-gulp.task('default', [ 'lint', 'combine-js', 'compress-html', 'watch' ]);
-  //
-  //
-  // gulp.task('default', [
-  //   'lint', 'combine-js',
-  //   'compile-sass', 'compress-html',
-  //   'watch' ]);
+gulp.task('browser-sync', function() {
+  browserSync({
+    proxy: "localhost:3000"
+  });
+});
+
+//
+//
+gulp.task('watch-sass', ['sass', 'browser-sync'], function() {
+  gulp.watch(SOURCE.scss, ['sass']);
+});
+
+//
+//
+gulp.task('compile', function () {
+  var stream = gulp.src(SOURCE.js) // your ES2015 code
+                   .pipe(cache.filter()) // remember files
+                   .pipe(babel()) // compile new ones
+                   .pipe(cache.cache()) // cache them
+                   .pipe(gulp.dest(dist)) // write them
+  return stream // important for gulp-nodemon to wait for completion
+})
+
+gulp.task('watch-server', ['compile'], function () {
+  var stream = nodemon({
+                 script: server // run ES5 code
+               , watch: SOURCE.js // watch ES2015 code
+               , tasks: ['compile'] // compile synchronously onChange
+               }).on('start', function () {
+
+               })
+
+  return stream
+})
