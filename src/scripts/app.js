@@ -4,7 +4,7 @@ var foo = function() {
 
 var boo = function() {
   console.log("I FUCKING LOVE HAPI AND GULP!");
-  return "boo0000";
+  return "booadfsfsdfdsfdddddddddddddddddd";
 }
 
 console.log("IT's ALLLIIVE....IT'S ALLLIIVE!!!!!");

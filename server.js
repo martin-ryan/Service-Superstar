@@ -22,7 +22,7 @@ server.register(inert, (err) => {
       method: 'GET',
       path:'/',
       handler: function (request, reply) {
-        reply.file("public/dist/index.html");
+        reply.file("build/dev/index.html");
       }
   });
 });

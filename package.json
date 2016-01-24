@@ -5,10 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "watch-server": "gulp watch-server",
     "semantic-watch": "gulp semantic-watch",
-    "semantic-build": "gulp semantic-build",
-    "dev": "npm run watch-server & npm run watch-semantic"
+    "semantic-build": "gulp semantic-build"
   },
   "repository": {
     "type": "git",
@@ -26,9 +24,11 @@
   },
   "devDependencies": {
     "babel": "^6.3.26",
+    "babelify": "^7.2.0",
     "better-console": "^0.2.4",
     "browser-sync": "^2.11.1",
     "browserify": "^13.0.0",
+    "connect-history-api-fallback": "^1.1.0",
     "del": "^2.2.0",
     "eslint": "^1.10.3",
     "extend": "^3.0.0",

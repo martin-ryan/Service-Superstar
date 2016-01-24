@@ -1,72 +1,102 @@
-var source = require('vinyl-source-stream');
+'use strict';
+
 var gulp = require('gulp');
-var gutil = require('gulp-util');
-var browserify = require('browserify');
-var babelify = require('babelify');
-var watchify = require('watchify');
-var notify = require('gulp-notify');
-
-var stylus = require('gulp-stylus');
-var autoprefixer = require('gulp-autoprefixer');
 var uglify = require('gulp-uglify');
-var rename = require('gulp-rename');
-var buffer = require('vinyl-buffer');
-
-var browserSync = require('browser-sync');
-var reload = browserSync.reload;
-var historyApiFallback = require('connect-history-api-fallback')
+var htmlreplace = require('gulp-html-replace');
+var source = require('vinyl-source-stream');
+var browserify = require('browserify');
+var watchify = require('watchify');
+var reactify = require('reactify');
+var streamify = require('gulp-streamify');
+var gutil = require('gulp-util');
+var notify = require('gulp-notify');
+var rename = require("gulp-rename");
+var babelify = require('babelify');
+var sass = require('gulp-sass');
+var concatCss = require('gulp-concat-css');
+var livereload = require('gulp-livereload');
+var minifyCss = require('gulp-minify-css');
+var htmlreplace = require('gulp-html-replace');
+var autoprefixer = require('gulp-autoprefixer');
+var watch = require('gulp-watch');
+var exec = require('child_process').exec;
+var spawn = require('child_process').spawn;
+var node;
 
 var path = {
-  IMAGES: 'src/lib/images/**'
-  FONTS: 'src/lib/fonts/**'
-  CSS: 'src/css/**'
+  SERVER: 'server.js',
+  ROUTES: 'routes/**/*.js',
+  IMAGES: 'src/lib/images/**.*',
+  FONTS: 'src/lib/fonts/**.*',
+  CSS: 'src/css/**.*',
   HTML: 'src/index.html',
+  HTML_DEV: 'build/dev/index.html',
   MINIFIED_OUT: 'build.min.js',
   OUTPUT: 'bundle.js',
   DEST: 'build',
   DEST_PROD: 'build/prod',
   DEST_DEV: 'build/dev',
-  ENTRY_POINT: './src/scripts/app.js'
+  ENTRY_POINT: 'src/scripts/app.js'
 };
 
-/*
-  Styles Task
-*/
+//
+//  SERVER STUFF -------------
+//
+var serverRun = function () {
+  if (node) node.kill()
+  // spawn(CLI command, args, options)
+  node = spawn('node', ['server.js'], {stdio: 'inherit'})
+  node.on('close', function (code) {
+    if (code === 8) {
+      gulp.log('Error detected, waiting for changes...');
+    }
+  });
+};
+//
+gulp.task('server-watch', function() {
 
-gulp.task('styles',function() {
-  // move over fonts
+  serverRun();
 
-  gulp.src(path.FONTS)
-    .pipe(gulp.dest(path.DEST_DEV + '/fonts'))
+  gulp.watch([path.SERVER, path.ROUTES], function() {
+    serverRun();
+  });
+});
+//
+process.on('exit', function() {
+    if (node) node.kill()
+})
 
-  // Compiles CSS
-  gulp.src('css/style.styl')
-    .pipe(stylus())
-    .pipe(autoprefixer())
-    .pipe(gulp.dest(path.DEST_DEV + '/css'))
-    .pipe(reload({stream:true}))
+//
+//  HTML STUFF -----------
+//
+gulp.task('html-copy', function(){
+  gulp.src(path.HTML)
+    .pipe(gulp.dest(path.DEST_DEV));
+  livereload.listen();
 });
 
-/*
-  Images
-*/
-gulp.task('images',function(){
-  gulp.src(path.IMAGES)
-    .pipe(gulp.dest(path.IMAGES + '/images'))
+gulp.task('html-watch', function(){
+  gulp.watch(path.HTML, ['html-copy']);
 });
 
-/*
-  Browser Sync
-*/
-gulp.task('browser-sync', function() {
-    browserSync({
-        // we need to disable clicks and forms for when we test multiple rooms
-        server : {},
-        middleware : [ historyApiFallback() ],
-        ghostMode: false
-    });
-});
+//
+//  CSS STUFF ------------
+//
+// gulp.task('sass', function() {
+//   return gulp.src(path.CSS)
+//       .pipe(sass())
+//       .pipe(autoprefixer({
+//             browsers: ['last 2 versions'],
+//             cascade: false
+//         }))
+//       .pipe(concatCss('style.css'))
+//       .pipe(gulp.dest('./build/'))
+//       .pipe(livereload());
+// });
 
+//
+//  SCRIPTS STUFF ------------
+//
 function handleErrors() {
   var args = Array.prototype.slice.call(arguments);
   notify.onError({
@@ -75,48 +105,97 @@ function handleErrors() {
   }).apply(this, args);
   this.emit('end'); // Keep gulp from hanging on this task
 }
-
-function buildScript(file, watch) {
+//
+function buildWatchScript(file) {
 
   var props = {
-    entries: ['./scripts/' + file],
+    entries: [file],
     debug : true,
-    transform:  [babelify.configure({stage : 0 })]
+    transform: [reactify, babelify]
   };
 
-  // watchify() if watch requested, otherwise run browserify() once
-  var bundler = watch ? watchify(browserify(props)) : browserify(props);
+  var bundler = watchify(browserify(props));
 
   function rebundle() {
     var stream = bundler.bundle();
     return stream
       .on('error', handleErrors)
       .pipe(source(file))
-      .pipe(gulp.dest('./build/'))
-      // If you also want to uglify it
-      // .pipe(buffer())
-      // .pipe(uglify())
-      // .pipe(rename('app.min.js'))
-      // .pipe(gulp.dest('./build'))
-      .pipe(reload({stream:true}))
+      .pipe(rename("bundle.js"))
+      .pipe(gulp.dest(path.DEST_DEV))
+      .pipe(livereload());
   }
 
-  // listen for an update and run rebundle
   bundler.on('update', function() {
     rebundle();
     gutil.log('Rebundle...');
   });
 
-  // run it once the first time buildScript is called
+  return rebundle();
+};
+//
+gulp.task('scripts-watch', function() {
+  livereload.listen();
+  // gulp.watch('css/scss/*.scss', ['sass']);
+  return buildWatchScript(path.ENTRY_POINT);
+});
+
+//
+//  GULP DEFAULT TASK ---------
+//
+gulp.task('default', ['scripts-watch', 'html-copy', 'html-watch', 'server-watch']);
+
+
+//
+//  PRODUCTION
+//
+function buildProdScript(file) {
+
+  var props = {
+    entries: [file],
+    debug : true,
+    transform: [reactify, babelify]
+  };
+
+  var bundler = browserify(props);
+
+  function rebundle() {
+    var stream = bundler.bundle();
+    return stream
+      .on('error', handleErrors)
+      .pipe(source(file))
+      .pipe(streamify(uglify()))
+      .pipe(rename("bundle.min.js"))
+      .pipe(gulp.dest(path.DEST_PROD));
+  }
+
   return rebundle();
 }
-
-gulp.task('scripts', function() {
-  return buildScript(path.ENTRY_POINT, false); // this will once run once because we set watch to false
+//
+gulp.task('build-prod', function() {
+  return buildProdScript(path.ENTRY_POINT);
 });
 
-// run 'scripts' task first, then watch for future changes
-gulp.task('default', ['images','styles','scripts','browser-sync'], function() {
-  gulp.watch(path.CSS, ['styles']); // gulp watch for stylus changes
-  return buildScript(path.ENTRY_POINT, true); // browserify watch for JS changes
+// gulp.task('sass-build', function() {
+//   return gulp.src('css/scss/*.scss')
+//       .pipe(sass())
+//       .pipe(autoprefixer({
+//             browsers: ['last 2 versions'],
+//             cascade: false
+//         }))
+//       .pipe(concatCss('style.min.css'))
+//       .pipe(minifyCss({compatibility: 'ie8'}))
+//       .pipe(gulp.dest('./build/'))
+//       .pipe(livereload());
+// });
+
+gulp.task('replaceHTML', function(){
+  gulp.src(path.HTML_DEV)
+    .pipe(htmlreplace({
+      'css': 'style.min.css',
+      'js': 'bundle.min.js'
+    }))
+    .pipe(gulp.dest(path.DEST_PROD));
 });
+
+gulp.task('prod', ['build-prod', 'replaceHTML']);
