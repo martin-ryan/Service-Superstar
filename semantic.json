@@ -1,19 +1,19 @@
 {
-  "base": "semantic/",
+  "base": "",
   "paths": {
     "source": {
-      "config": "src/theme.config",
-      "definitions": "src/definitions/",
-      "site": "src/site/",
-      "themes": "src/themes/"
+      "config": "src/lib/semantic/src/theme.config",
+      "definitions": "src/lib/semantic/src/definitions/",
+      "site": "src/lib/semantic/src/site/",
+      "themes": "src/lib/semantic/src/themes/"
     },
     "output": {
-      "packaged": "dist/",
-      "uncompressed": "dist/components/",
-      "compressed": "dist/components/",
-      "themes": "dist/themes/"
+      "packaged": "build/dev",
+      "uncompressed": "build/dev/components/semantic",
+      "compressed": "build/prod/components/semantic",
+      "themes": "build/dev/themes"
     },
-    "clean": "dist/"
+    "clean": "dist/src"
   },
   "permission": false,
   "rtl": "No",
